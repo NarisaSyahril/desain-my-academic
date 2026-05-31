@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MY ACADEMIC - Digital Prototype</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root { --scale: 1; }
+    html { font-size: calc(16px * var(--scale)); }
+    body { transition: background .2s ease, color .2s ease; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .toast { animation: slideIn .25s ease, fadeOut .25s ease 3.2s forwards; }
+    @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes fadeOut { to { transform: translateY(12px); opacity: 0; } }
+    .dark-mode { background: #020617; color: #e2e8f0; }
+    .dark-mode .surface { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+    .dark-mode .muted { color: #94a3b8 !important; }
+    .dark-mode .soft { background: #1e293b !important; }
+    .dark-mode .text-slate-950, .dark-mode .text-slate-900, .dark-mode .text-slate-700, .dark-mode .text-slate-600 { color: #e2e8f0 !important; }
+    .dark-mode .bg-white { background-color: #0f172a !important; }
+    .dark-mode .bg-slate-50, .dark-mode .bg-slate-100 { background-color: #1e293b !important; }
+    .dark-mode input, .dark-mode textarea, .dark-mode select { background: #0f172a !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+    .high-contrast * { outline-color: #facc15; }
+    .high-contrast .surface { border-color: #111827 !important; box-shadow: 0 0 0 2px rgba(0,0,0,.08); }
+    .high-contrast button:focus, .high-contrast input:focus { outline: 3px solid #facc15 !important; outline-offset: 2px; }
+    .modal-open { overflow: hidden; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <div id="app" class="min-h-screen">
+    <div class="flex">
+      <aside id="desktopSidebar" class="hidden h-screen w-72 shrink-0 border-r border-slate-200 bg-slate-950 text-white lg:block"></aside>
+      <main class="min-w-0 flex-1">
+        <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur surface">
+          <div class="flex h-20 items-center gap-4 px-5 lg:px-8">
+            <button data-action="toggle-mobile" class="grid h-11 w-11 place-items-center rounded-2xl border border-slate-200 bg-white lg:hidden surface" aria-label="Buka menu">
+              <i data-lucide="menu" class="h-5 w-5"></i>
+            </button>
+
+            <div class="relative flex-1">
+              <i data-lucide="search" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"></i>
+              <input id="globalSearch" class="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 pl-12 pr-4 text-sm outline-none transition focus:border-sky-400 focus:bg-white focus:ring-4 focus:ring-sky-100" placeholder="Cari KRS, jadwal kuliah, nilai, kehadiran..." />
+              <div id="searchPanel" class="absolute left-0 right-0 top-14 z-40 hidden rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl surface"></div>
+            </div>
+
+            <button data-action="open-ai" class="hidden items-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:flex">
+              <i data-lucide="bot" class="h-[18px] w-[18px]"></i> AI Help
+            </button>
+
+            <div class="relative">
+              <button data-action="toggle-notification" class="relative grid h-12 w-12 place-items-center rounded-2xl border border-slate-200 bg-white surface" aria-label="Notifikasi">
+                <span id="notifDot" class="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-red-500"></span>
+                <i data-lucide="bell" class="h-5 w-5"></i>
+              </button>
+              <div id="notificationPanel" class="absolute right-0 top-14 z-40 hidden w-80 rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl surface"></div>
+            </div>
+
+            <div class="relative hidden md:block">
+              <button data-action="toggle-profile" class="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 surface">
+                <div class="grid h-9 w-9 place-items-center rounded-full bg-slate-100 soft"><i data-lucide="user" class="h-[18px] w-[18px]"></i></div>
+                <div class="text-left">
+                  <p class="text-sm font-semibold">Narisa Syahril</p>
+                  <p class="text-xs text-slate-500 muted">IF-9 / Semester VI</p>
+                </div>
+              </button>
+              <div id="profilePanel" class="absolute right-0 top-14 z-40 hidden w-72 rounded-3xl border border-slate-200 bg-white p-3 shadow-2xl surface"></div>
+            </div>
+          </div>
+        </header>
+
+        <div class="mx-auto max-w-7xl px-5 py-7 lg:px-8">
+          <div class="mb-6 flex flex-wrap gap-2" id="topTabs"></div>
+          <div id="pageTitle" class="mb-5"></div>
+          <div id="pages"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div id="mobileOverlay" class="fixed inset-0 z-40 hidden bg-black/40 lg:hidden"></div>
+  <aside id="mobileSidebar" class="fixed left-0 top-0 z-50 hidden h-screen w-80 max-w-[85vw] border-r border-slate-200 bg-slate-950 text-white lg:hidden"></aside>
+  <div id="modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4"></div>
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-[70] space-y-3"></div>
+
+  <script>
+    const state = {
+      page: 'dashboard',
+      krsStep: 3,
+      selectedCourses: new Set(['Desain Interaksi Perangkat Lunak', 'Rekayasa Fitur', 'Keamanan Big Data']),
+      textSize: 'Sedang',
+      theme: 'Terang',
+      contrast: 'Normal',
+      keyboard: true,
+      iconLabels: true,
+      notificationsRead: false,
+      searchQuery: ''
+    };
+
+    const navGroups = [
+      { title: 'Dashboard', items: [{ page: 'dashboard', label: 'Beranda', icon: 'home' }] },
+      { title: 'Akademik', items: [
+        { page: 'krs', label: 'KRS', icon: 'clipboard-list' },
+        { page: 'kelas', label: 'Pengisian Kelas', icon: 'graduation-cap' },
+        { page: 'jadwal', label: 'Jadwal Kuliah', icon: 'calendar-days' },
+        { page: 'kurikulum', label: 'Kurikulum', icon: 'book-open' }
+      ]},
+      { title: 'Hasil Studi', items: [
+        { page: 'nilai', label: 'Riwayat Nilai', icon: 'bar-chart-3' },
+        { page: 'kehadiran', label: 'Kehadiran', icon: 'check-circle-2' }
+      ]},
+      { title: 'Layanan', items: [
+        { page: 'kuesioner', label: 'Kuesioner', icon: 'file-text' },
+        { page: 'aktivitas', label: 'Aktivitas Mahasiswa', icon: 'clipboard-list' },
+        { page: 'wisuda', label: 'Syarat Wisuda', icon: 'graduation-cap' },
+        { page: 'accessibility', label: 'Accessibility', icon: 'accessibility' }
+      ]}
+    ];
+
+    const tabItems = [
+      { page: 'dashboard', label: 'Dashboard Baru' },
+      { page: 'krs', label: 'Wizard KRS' },
+      { page: 'accessibility', label: 'Accessibility' }
+    ];
+
+    const schedules = [
+      { time: '09.30 - 12.00', course: 'Rekayasa Fitur', room: 'R5307', lecturer: 'Dr. Nam Nguyen', status: 'Selesai' },
+      { time: '12.00 - 14.30', course: 'Desain Interaksi Perangkat Lunak', room: 'R5404', lecturer: 'Ibu Rani', status: 'Berikutnya' },
+      { time: '14.30 - 17.00', course: 'Komputasi Awan', room: 'R5407', lecturer: 'Pak Dimas', status: 'Belum mulai' }
+    ];
+
+    const krsCourses = [
+      { name: 'Desain Interaksi Perangkat Lunak', sks: 3, schedule: 'Selasa 12.00 - 14.30', status: 'Direkomendasikan' },
+      { name: 'Rekayasa Fitur', sks: 3, schedule: 'Selasa 09.30 - 12.00', status: 'Direkomendasikan' },
+      { name: 'Keamanan Big Data', sks: 3, schedule: 'Jumat 13.40 - 16.10', status: 'Aman' },
+      { name: 'Komputasi Awan', sks: 3, schedule: 'Selasa 14.30 - 17.00', status: 'Aman' }
+    ];
+
+    const notifications = [
+      { title: 'KRS menunggu persetujuan', desc: 'Dosen wali belum menyetujui rencana studi.', page: 'krs' },
+      { title: 'Deadline 2 hari lagi', desc: 'Periode pengisian KRS segera berakhir.', page: 'krs' },
+      { title: 'Kuesioner tersedia', desc: 'Isi kuesioner untuk mata kuliah semester ini.', page: 'kuesioner' }
+    ];
+
+    const quickAccess = [
+      { label: 'Isi KRS', page: 'krs', icon: 'clipboard-list' },
+      { label: 'Jadwal Hari Ini', page: 'jadwal', icon: 'calendar-days' },
+      { label: 'Riwayat Nilai', page: 'nilai', icon: 'bar-chart-3' },
+      { label: 'Kehadiran', page: 'kehadiran', icon: 'check-circle-2' },
+      { label: 'Kuesioner', page: 'kuesioner', icon: 'file-text' },
+      { label: 'Dosen Wali', page: 'kelas', icon: 'user-round' }
+    ];
+
+    function icon(name, cls = 'h-5 w-5') {
+      return `<i data-lucide="${name}" class="${cls}"></i>`;
+    }
+
+    function renderSidebar(targetId, mobile = false) {
+      const closeBtn = mobile ? `<button data-action="close-mobile" class="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 hover:bg-white/10">${icon('x', 'h-5 w-5')}</button>` : '';
+      const groups = navGroups.map(group => `
+        <div class="mb-6">
+          <p class="mb-3 px-3 text-xs font-semibold uppercase tracking-widest text-slate-400">${group.title}</p>
+          <div class="space-y-1">
+            ${group.items.map(item => `
+              <button data-page="${item.page}" class="nav-btn flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm transition ${state.page === item.page ? 'bg-sky-500 text-white shadow-lg shadow-sky-950/40' : 'text-slate-300 hover:bg-white/10 hover:text-white'}">
+                ${icon(item.icon, 'h-[18px] w-[18px]')}
+                <span>${item.label}</span>
+              </button>`).join('')}
+          </div>
+        </div>`).join('');
+
+      document.getElementById(targetId).innerHTML = `
+        <div class="flex h-20 items-center justify-between gap-3 border-b border-white/10 px-6">
+          <div class="flex items-center gap-3">
+            <div class="grid h-11 w-11 place-items-center rounded-2xl bg-sky-500 font-bold">UA</div>
+            <div>
+              <p class="text-lg font-bold tracking-wide">MY ACADEMIC</p>
+              <p class="text-xs text-slate-300">UNIKOM Student Portal</p>
+            </div>
+          </div>
+          ${closeBtn}
+        </div>
+        <nav class="h-[calc(100vh-5rem)] overflow-y-auto px-4 py-5">${groups}</nav>`;
+    }
+
+    function renderTabs() {
+      document.getElementById('topTabs').innerHTML = tabItems.map(tab => `
+        <button data-page="${tab.page}" class="rounded-2xl px-4 py-3 text-sm font-bold transition ${state.page === tab.page ? 'bg-slate-950 text-white' : 'bg-white text-slate-600 hover:bg-slate-50 surface'}">
+          ${tab.label}
+        </button>
+      `).join('');
+    }
+
+    function setTitle(title, desc) {
+      document.getElementById('pageTitle').innerHTML = `
+        <h1 class="text-2xl font-bold text-slate-950 dark:text-white">${title}</h1>
+        <p class="mt-1 text-sm text-slate-500 muted">${desc}</p>`;
+    }
+
+    function renderPages() {
+      const pages = document.getElementById('pages');
+      pages.innerHTML = `
+        <section id="page-dashboard" class="page ${state.page === 'dashboard' ? 'active' : ''}">${dashboardPage()}</section>
+        <section id="page-krs" class="page ${state.page === 'krs' ? 'active' : ''}">${krsPage()}</section>
+        <section id="page-accessibility" class="page ${state.page === 'accessibility' ? 'active' : ''}">${accessibilityPage()}</section>
+        <section id="page-kelas" class="page ${state.page === 'kelas' ? 'active' : ''}">${kelasPage()}</section>
+        <section id="page-jadwal" class="page ${state.page === 'jadwal' ? 'active' : ''}">${jadwalPage()}</section>
+        <section id="page-kurikulum" class="page ${state.page === 'kurikulum' ? 'active' : ''}">${kurikulumPage()}</section>
+        <section id="page-nilai" class="page ${state.page === 'nilai' ? 'active' : ''}">${nilaiPage()}</section>
+        <section id="page-kehadiran" class="page ${state.page === 'kehadiran' ? 'active' : ''}">${kehadiranPage()}</section>
+        <section id="page-kuesioner" class="page ${state.page === 'kuesioner' ? 'active' : ''}">${kuesionerPage()}</section>
+        <section id="page-aktivitas" class="page ${state.page === 'aktivitas' ? 'active' : ''}">${aktivitasPage()}</section>
+        <section id="page-wisuda" class="page ${state.page === 'wisuda' ? 'active' : ''}">${wisudaPage()}</section>`;
+    }
+
+    function dashboardPage() {
+      return `
+        <div class="space-y-6">
+          <div class="rounded-3xl bg-gradient-to-br from-sky-600 to-slate-950 p-7 text-white shadow-xl shadow-slate-200">
+            <div class="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+              <div>
+                <p class="mb-2 text-sm font-medium text-sky-100">Dashboard Akademik Personal</p>
+                <h2 class="text-3xl font-bold md:text-4xl">Selamat datang, Narisa</h2>
+                <p class="mt-3 max-w-2xl text-sm leading-6 text-sky-50">Ringkasan status akademik, jadwal, deadline, dan bantuan cerdas tersedia dalam satu halaman agar interaksi lebih cepat dan intuitif.</p>
+              </div>
+              <button data-action="start-guide" class="flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-sky-50">
+                Mulai Panduan Mahasiswa Baru ${icon('chevron-right', 'h-[18px] w-[18px]')}
+              </button>
+            </div>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            ${statusCard('clipboard-list', 'Status KRS', 'Menunggu Persetujuan', 'Dosen wali belum menyetujui rencana studi.', 'amber', 'krs')}
+            ${statusCard('calendar-days', 'Jadwal Hari Ini', '3 Mata Kuliah', 'Kuliah berikutnya pukul 12.00 di R5404.', 'sky', 'jadwal')}
+            ${statusCard('alert-triangle', 'Deadline Akademik', '2 Hari Lagi', 'Periode pengisian KRS segera berakhir.', 'amber', 'krs')}
+            ${statusCard('check-circle-2', 'Kehadiran', '92%', 'Kehadiran semester berjalan aman.', 'emerald', 'kehadiran')}
+          </div>
+
+          <div class="grid gap-6 xl:grid-cols-[1.4fr_0.9fr]">
+            <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface">
+              <div class="mb-5 flex items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-xl font-bold text-slate-950 dark:text-white">Jadwal Kuliah Hari Ini</h2>
+                  <p class="text-sm text-slate-500 muted">Informasi diprioritaskan berdasarkan aktivitas akademik terdekat.</p>
+                </div>
+                <button data-page="jadwal" class="rounded-2xl border border-slate-200 px-4 py-2 text-sm font-semibold hover:bg-slate-50 surface">Lihat Semua</button>
+              </div>
+              <div class="space-y-3">${schedules.map(scheduleRow).join('')}</div>
+            </section>
+
+            <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface">
+              <div class="mb-5 flex items-center gap-3">
+                <div class="grid h-11 w-11 place-items-center rounded-2xl bg-sky-50 text-sky-700">${icon('bot', 'h-[22px] w-[22px]')}</div>
+                <div>
+                  <h2 class="text-xl font-bold text-slate-950 dark:text-white">AI Academic Assistant</h2>
+                  <p class="text-sm text-slate-500 muted">Bantuan kontekstual untuk mahasiswa.</p>
+                </div>
+              </div>
+              <div class="rounded-3xl bg-slate-50 p-4 soft">
+                <div id="miniAiLog" class="mb-3 max-h-44 space-y-2 overflow-y-auto rounded-2xl bg-white p-4 text-sm text-slate-700 shadow-sm surface">
+                  <p><b>AI:</b> Halo! Saya bisa membantu mencari jadwal, nilai, KRS, atau menjelaskan pesan sistem.</p>
+                </div>
+                <div class="flex gap-2">
+                  <input id="miniAiInput" class="h-11 flex-1 rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none focus:border-sky-400" placeholder="Tulis pertanyaan..." />
+                  <button data-action="mini-ai-send" class="grid h-11 w-11 place-items-center rounded-2xl bg-sky-600 text-white">${icon('message-circle', 'h-[18px] w-[18px]')}</button>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface">
+            <div class="mb-5"><h2 class="text-xl font-bold text-slate-950 dark:text-white">Quick Access</h2><p class="text-sm text-slate-500 muted">Shortcut untuk fitur yang paling sering digunakan.</p></div>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+              ${quickAccess.map(item => `<button data-page="${item.page}" class="rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-700 transition hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 surface">${icon(item.icon, 'mx-auto mb-2 h-5 w-5')} ${item.label}</button>`).join('')}
+            </div>
+          </section>
+        </div>`;
+    }
+
+    function statusCard(iconName, title, value, note, tone, page) {
+      const toneMap = {
+        sky: 'border-sky-100 bg-sky-50 text-sky-700', amber: 'border-amber-100 bg-amber-50 text-amber-700',
+        emerald: 'border-emerald-100 bg-emerald-50 text-emerald-700', violet: 'border-violet-100 bg-violet-50 text-violet-700'
+      };
+      return `<button data-page="${page}" class="rounded-3xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md surface">
+        <div class="mb-4 grid h-12 w-12 place-items-center rounded-2xl border ${toneMap[tone]}">${icon(iconName, 'h-[23px] w-[23px]')}</div>
+        <p class="text-sm text-slate-500 muted">${title}</p><h3 class="mt-1 text-xl font-bold text-slate-950 dark:text-white">${value}</h3><p class="mt-2 text-sm text-slate-500 muted">${note}</p>
+      </button>`;
+    }
+
+    function scheduleRow(item) {
+      const badge = item.status === 'Berikutnya' ? 'bg-sky-600 text-white' : item.status === 'Selesai' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-900 text-white';
+      return `<button data-action="schedule-detail" data-course="${item.course}" class="flex w-full items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-left transition hover:bg-sky-50 soft">
+        <div class="grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-700 shadow-sm surface">${icon('clock', 'h-5 w-5')}</div>
+        <div class="flex-1"><p class="font-semibold text-slate-900 dark:text-white">${item.course}</p><p class="text-sm text-slate-500 muted">${item.time} • ${item.lecturer}</p></div>
+        <span class="rounded-full ${badge} px-3 py-1 text-xs font-bold">${item.room}</span>
+      </button>`;
+    }
+
+    function krsPage() {
+      const totalSks = krsCourses.filter(c => state.selectedCourses.has(c.name)).reduce((sum, c) => sum + c.sks, 0);
+      const steps = ['Semester', 'Mata Kuliah', 'Jadwal', 'Konfirmasi', 'Selesai'];
+      return `
+        <section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface">
+          <div class="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div><h2 class="text-2xl font-bold text-slate-950 dark:text-white">Wizard Pengisian KRS</h2><p class="mt-1 text-sm text-slate-500 muted">Alur dibuat bertahap agar mahasiswa memahami proses dari awal hingga selesai.</p></div>
+            <div class="flex flex-wrap gap-2"><span class="rounded-full bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">Tidak ada bentrok jadwal</span><span id="totalSksBadge" class="rounded-full bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700">${totalSks} SKS dipilih</span></div>
+          </div>
+          <div class="mb-8 grid gap-3 md:grid-cols-5">
+            ${steps.map((step, index) => {
+              const num = index + 1;
+              const active = num === state.krsStep;
+              const done = num < state.krsStep;
+              return `<button data-action="set-krs-step" data-step="${num}" class="rounded-2xl border ${active ? 'border-sky-300 bg-sky-50' : 'border-slate-200 bg-slate-50'} p-4 text-left transition hover:border-sky-300 hover:bg-sky-50 soft">
+                <div class="mb-3 grid h-9 w-9 place-items-center rounded-full text-sm font-bold ${done || active ? 'bg-sky-600 text-white' : 'bg-white text-slate-500'}">${num}</div>
+                <p class="text-sm font-bold text-slate-900 dark:text-white">${step}</p><p class="mt-1 text-xs text-slate-500 muted">${done ? 'Selesai' : active ? 'Aktif' : 'Belum'}</p>
+              </button>`;
+            }).join('')}
+          </div>
+          <div class="overflow-x-auto rounded-3xl border border-slate-200">
+            <table class="w-full min-w-[760px] text-left text-sm">
+              <thead class="bg-slate-50 text-slate-600 soft"><tr><th class="p-4">Pilih</th><th class="p-4">Mata Kuliah</th><th class="p-4">SKS</th><th class="p-4">Jadwal</th><th class="p-4">Status</th><th class="p-4">Aksi</th></tr></thead>
+              <tbody class="divide-y divide-slate-100">
+                ${krsCourses.map(course => `<tr class="bg-white surface"><td class="p-4"><input data-action="toggle-course" data-course="${course.name}" type="checkbox" ${state.selectedCourses.has(course.name) ? 'checked' : ''} class="h-5 w-5 rounded" /></td><td class="p-4 font-semibold text-slate-900 dark:text-white">${course.name}</td><td class="p-4">${course.sks}</td><td class="p-4">${course.schedule}</td><td class="p-4"><span class="rounded-full bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">${course.status}</span></td><td class="p-4"><button data-action="course-info" data-course="${course.name}" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 surface">Detail</button></td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <p class="text-sm text-slate-500 muted">Pilih mata kuliah, lalu gunakan tombol lanjut untuk simulasi pengisian KRS.</p>
+            <div class="flex justify-end gap-3"><button data-action="krs-prev" class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 surface">Kembali</button><button data-action="krs-next" class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">${state.krsStep >= 5 ? 'Kirim KRS' : 'Lanjutkan'}</button></div>
+          </div>
+        </section>`;
+    }
+
+    function accessibilityPage() {
+      const button = (group, value, active) => `<button data-action="set-access" data-group="${group}" data-value="${value}" class="rounded-2xl border px-4 py-3 text-sm font-semibold ${active ? 'border-sky-300 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-700 surface'}">${value}</button>`;
+      return `<section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface">
+        <div class="mb-6 flex items-center gap-3"><div class="grid h-12 w-12 place-items-center rounded-2xl bg-violet-50 text-violet-700">${icon('accessibility', 'h-6 w-6')}</div><div><h2 class="text-2xl font-bold text-slate-950 dark:text-white">Pengaturan Accessibility</h2><p class="text-sm text-slate-500 muted">Pengguna dapat menyesuaikan tampilan sesuai kebutuhan visual dan perangkat.</p></div></div>
+        <div class="grid gap-4 md:grid-cols-2">
+          <div class="rounded-3xl border border-slate-200 p-5 surface"><div class="mb-4 flex items-center gap-3">${icon('type', 'h-[22px] w-[22px] text-slate-700')}<h3 class="font-bold text-slate-950 dark:text-white">Ukuran Teks</h3></div><div class="grid grid-cols-3 gap-2">${['Kecil','Sedang','Besar'].map(v => button('textSize', v, state.textSize === v)).join('')}</div></div>
+          <div class="rounded-3xl border border-slate-200 p-5 surface"><div class="mb-4 flex items-center gap-3">${icon('moon', 'h-[22px] w-[22px] text-slate-700')}<h3 class="font-bold text-slate-950 dark:text-white">Mode Tampilan</h3></div><div class="grid grid-cols-2 gap-2">${['Terang','Gelap'].map(v => button('theme', v, state.theme === v)).join('')}</div></div>
+          <div class="rounded-3xl border border-slate-200 p-5 surface"><div class="mb-4 flex items-center gap-3">${icon('contrast', 'h-[22px] w-[22px] text-slate-700')}<h3 class="font-bold text-slate-950 dark:text-white">Kontras</h3></div><div class="grid grid-cols-2 gap-2">${['Normal','Tinggi'].map(v => button('contrast', v, state.contrast === v)).join('')}</div></div>
+          <div class="rounded-3xl border border-slate-200 p-5 surface"><div class="mb-4 flex items-center gap-3">${icon('settings', 'h-[22px] w-[22px] text-slate-700')}<h3 class="font-bold text-slate-950 dark:text-white">Navigasi</h3></div><div class="space-y-3 text-sm"><label class="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 soft"><input data-action="toggle-keyboard" type="checkbox" ${state.keyboard ? 'checked' : ''} /> Navigasi keyboard aktif</label><label class="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 soft"><input data-action="toggle-labels" type="checkbox" ${state.iconLabels ? 'checked' : ''} /> Label ikon ditampilkan</label></div></div>
+        </div>
+        <button data-action="save-access" class="mt-6 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-bold text-white">Simpan Pengaturan</button>
+      </section>`;
+    }
+
+    function kelasPage() {
+      return genericCard('Pengisian Kelas', 'Pilih kelas, lihat kuota, dan hubungi dosen wali dari halaman ini.', [
+        ['IF-9', 'Desain Interaksi Perangkat Lunak', 'R5404', '34/40'],
+        ['IF-9', 'Rekayasa Fitur', 'R5307', '31/40'],
+        ['IF-10', 'Keamanan Big Data', 'R5502', '28/40']
+      ], ['Kelas', 'Mata Kuliah', 'Ruang', 'Kuota'], 'Ajukan Persetujuan Dosen Wali');
+    }
+
+    function jadwalPage() {
+      return `<section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface"><div class="mb-5 flex items-center justify-between"><div><h2 class="text-2xl font-bold text-slate-950 dark:text-white">Jadwal Kuliah</h2><p class="text-sm text-slate-500 muted">Klik jadwal untuk melihat detail ruangan dan dosen.</p></div><button data-action="download-schedule" class="rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white">Download Jadwal</button></div><div class="space-y-3">${schedules.map(scheduleRow).join('')}</div></section>`;
+    }
+
+    function kurikulumPage() {
+      return `<section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface"><h2 class="text-2xl font-bold text-slate-950 dark:text-white">Kurikulum</h2><p class="mt-1 text-sm text-slate-500 muted">Peta mata kuliah dibuat per semester agar mudah dipahami.</p><div class="mt-6 grid gap-4 md:grid-cols-3">${['Semester IV','Semester V','Semester VI'].map((sem, i) => `<button data-action="open-curriculum" data-semester="${sem}" class="rounded-3xl border border-slate-200 p-5 text-left transition hover:bg-sky-50 surface"><p class="text-sm text-slate-500 muted">${sem}</p><h3 class="mt-1 text-xl font-bold">${18 + i*2} SKS</h3><p class="mt-2 text-sm text-slate-500 muted">Klik untuk melihat daftar mata kuliah.</p></button>`).join('')}</div></section>`;
+    }
+
+    function nilaiPage() {
+      return genericCard('Riwayat Nilai', 'Nilai ditampilkan ringkas dengan IP dan status kelulusan.', [
+        ['Desain Interaksi Perangkat Lunak', 'A', '4.00', 'Lulus'],
+        ['Rekayasa Fitur', 'A-', '3.70', 'Lulus'],
+        ['Komputasi Awan', 'B+', '3.30', 'Lulus']
+      ], ['Mata Kuliah', 'Nilai', 'Bobot', 'Status'], 'Unduh Transkrip');
+    }
+
+    function kehadiranPage() {
+      return genericCard('Kehadiran', 'Pantau persentase kehadiran setiap mata kuliah.', [
+        ['Desain Interaksi Perangkat Lunak', '12/13', '92%', 'Aman'],
+        ['Rekayasa Fitur', '11/12', '91%', 'Aman'],
+        ['Keamanan Big Data', '10/12', '83%', 'Perlu perhatian']
+      ], ['Mata Kuliah', 'Hadir', 'Persentase', 'Status'], 'Ajukan Koreksi Kehadiran');
+    }
+
+    function kuesionerPage() {
+      return genericCard('Kuesioner', 'Isi kuesioner evaluasi perkuliahan yang masih tersedia.', [
+        ['Desain Interaksi Perangkat Lunak', 'Belum diisi', '31 Mei 2026', 'Wajib'],
+        ['Rekayasa Fitur', 'Sudah diisi', '31 Mei 2026', 'Selesai'],
+        ['Komputasi Awan', 'Belum diisi', '2 Juni 2026', 'Wajib']
+      ], ['Mata Kuliah', 'Status', 'Batas Waktu', 'Kategori'], 'Isi Kuesioner Sekarang');
+    }
+
+    function aktivitasPage() {
+      return genericCard('Aktivitas Mahasiswa', 'Catat aktivitas organisasi, lomba, seminar, dan kepanitiaan.', [
+        ['HMIF', 'Organisasi', 'Aktif', '20 poin'],
+        ['Seminar UI/UX', 'Seminar', 'Selesai', '5 poin'],
+        ['Lomba Desain App', 'Kompetisi', 'Proses validasi', '15 poin']
+      ], ['Nama', 'Jenis', 'Status', 'Poin'], 'Tambah Aktivitas');
+    }
+
+    function wisudaPage() {
+      return `<section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface"><h2 class="text-2xl font-bold text-slate-950 dark:text-white">Syarat Wisuda</h2><p class="mt-1 text-sm text-slate-500 muted">Checklist membantu mahasiswa mengetahui syarat yang sudah dan belum terpenuhi.</p><div class="mt-6 space-y-3">${['SKS minimal terpenuhi','Tidak ada nilai E','Bebas administrasi','TOEFL/sertifikat bahasa','Upload dokumen TA'].map((item, idx) => `<label class="flex items-center justify-between rounded-2xl border border-slate-200 p-4 surface"><span class="font-semibold">${item}</span><input data-action="toggle-wisuda" type="checkbox" ${idx < 3 ? 'checked' : ''} class="h-5 w-5" /></label>`).join('')}</div><button data-action="check-graduation" class="mt-6 rounded-2xl bg-slate-950 px-6 py-3 text-sm font-bold text-white">Cek Kelayakan Wisuda</button></section>`;
+    }
+
+    function genericCard(title, desc, rows, headers, actionText) {
+      return `<section class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm surface"><div class="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 class="text-2xl font-bold text-slate-950 dark:text-white">${title}</h2><p class="mt-1 text-sm text-slate-500 muted">${desc}</p></div><button data-action="generic-action" data-label="${actionText}" class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">${actionText}</button></div><div class="overflow-x-auto rounded-3xl border border-slate-200"><table class="w-full min-w-[680px] text-left text-sm"><thead class="bg-slate-50 text-slate-600 soft"><tr>${headers.map(h => `<th class="p-4">${h}</th>`).join('')}<th class="p-4">Aksi</th></tr></thead><tbody class="divide-y divide-slate-100">${rows.map(row => `<tr class="bg-white surface">${row.map(cell => `<td class="p-4">${cell}</td>`).join('')}<td class="p-4"><button data-action="row-detail" data-label="${row[0]}" class="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 surface">Detail</button></td></tr>`).join('')}</tbody></table></div></section>`;
+    }
+
+    function renderPanels() {
+      document.getElementById('notificationPanel').innerHTML = `<div class="mb-2 flex items-center justify-between px-2"><h3 class="font-bold">Notifikasi</h3><button data-action="mark-read" class="text-xs font-bold text-sky-600">Tandai dibaca</button></div>${notifications.map(n => `<button data-page="${n.page}" class="w-full rounded-2xl p-3 text-left hover:bg-slate-50 soft"><p class="text-sm font-bold">${n.title}</p><p class="text-xs text-slate-500 muted">${n.desc}</p></button>`).join('')}`;
+      document.getElementById('profilePanel').innerHTML = `<div class="rounded-2xl bg-slate-50 p-4 soft"><p class="font-bold">Narisa Syahril</p><p class="text-sm text-slate-500 muted">IF-9 / Semester VI</p></div><div class="mt-2 space-y-1"><button data-action="profile-info" class="w-full rounded-2xl p-3 text-left text-sm font-semibold hover:bg-slate-50 soft">Lihat Profil</button><button data-page="accessibility" class="w-full rounded-2xl p-3 text-left text-sm font-semibold hover:bg-slate-50 soft">Pengaturan</button><button data-action="logout-demo" class="w-full rounded-2xl p-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50">Logout Demo</button></div>`;
+    }
+
+    function renderSearch() {
+      const panel = document.getElementById('searchPanel');
+      const q = state.searchQuery.trim().toLowerCase();
+      if (!q) { panel.classList.add('hidden'); return; }
+      const allItems = navGroups.flatMap(g => g.items).concat(quickAccess);
+      const results = allItems.filter(item => item.label.toLowerCase().includes(q) || item.page.includes(q)).slice(0, 6);
+      panel.innerHTML = results.length ? results.map(item => `<button data-page="${item.page}" class="flex w-full items-center gap-3 rounded-2xl p-3 text-left hover:bg-slate-50 soft">${icon(item.icon || 'search', 'h-5 w-5 text-sky-600')}<span class="font-semibold">${item.label}</span></button>`).join('') : `<div class="p-4 text-sm text-slate-500 muted">Tidak ada hasil. Coba kata: KRS, jadwal, nilai, kehadiran.</div>`;
+      panel.classList.remove('hidden');
+      refreshIcons();
+    }
+
+    function navigate(page) {
+      state.page = page;
+      const titles = {
+        dashboard: ['Dashboard Baru', 'Ringkasan akademik utama dalam satu halaman.'], krs: ['Wizard KRS', 'Simulasi pengisian rencana studi bertahap.'], accessibility: ['Accessibility', 'Pengaturan tampilan dan aksesibilitas.'], kelas: ['Pengisian Kelas', 'Pilih kelas dan pantau kuota.'], jadwal: ['Jadwal Kuliah', 'Lihat jadwal kuliah hari ini.'], kurikulum: ['Kurikulum', 'Peta mata kuliah per semester.'], nilai: ['Riwayat Nilai', 'Lihat nilai dan IP mata kuliah.'], kehadiran: ['Kehadiran', 'Pantau presensi semester berjalan.'], kuesioner: ['Kuesioner', 'Evaluasi perkuliahan.'], aktivitas: ['Aktivitas Mahasiswa', 'Catatan kegiatan dan poin mahasiswa.'], wisuda: ['Syarat Wisuda', 'Checklist persyaratan kelulusan.']
+      };
+      setTitle(...(titles[page] || titles.dashboard));
+      closeMenus();
+      renderAll(false);
+      showToast(`Membuka halaman ${titles[page]?.[0] || page}`);
+    }
+
+    function renderAll(resetTitle = true) {
+      renderSidebar('desktopSidebar');
+      renderSidebar('mobileSidebar', true);
+      renderTabs();
+      if (resetTitle) navigateWithoutToast(state.page);
+      else renderPages();
+      renderPanels();
+      applyAccessSettings();
+      refreshIcons();
+    }
+
+    function navigateWithoutToast(page) {
+      const titles = {dashboard:['Dashboard Baru','Ringkasan akademik utama dalam satu halaman.'],krs:['Wizard KRS','Simulasi pengisian rencana studi bertahap.'],accessibility:['Accessibility','Pengaturan tampilan dan aksesibilitas.'],kelas:['Pengisian Kelas','Pilih kelas dan pantau kuota.'],jadwal:['Jadwal Kuliah','Lihat jadwal kuliah hari ini.'],kurikulum:['Kurikulum','Peta mata kuliah per semester.'],nilai:['Riwayat Nilai','Lihat nilai dan IP mata kuliah.'],kehadiran:['Kehadiran','Pantau presensi semester berjalan.'],kuesioner:['Kuesioner','Evaluasi perkuliahan.'],aktivitas:['Aktivitas Mahasiswa','Catatan kegiatan dan poin mahasiswa.'],wisuda:['Syarat Wisuda','Checklist persyaratan kelulusan.']};
+      setTitle(...titles[page]);
+      renderPages();
+    }
+
+    function refreshIcons() { if (window.lucide) lucide.createIcons(); }
+
+    function closeMenus() {
+      document.getElementById('searchPanel').classList.add('hidden');
+      document.getElementById('notificationPanel').classList.add('hidden');
+      document.getElementById('profilePanel').classList.add('hidden');
+      document.getElementById('mobileOverlay').classList.add('hidden');
+      document.getElementById('mobileSidebar').classList.add('hidden');
+    }
+
+    function showToast(message, type = 'info') {
+      const colors = type === 'success' ? 'bg-emerald-600' : type === 'danger' ? 'bg-red-600' : 'bg-slate-950';
+      const toast = document.createElement('div');
+      toast.className = `toast rounded-2xl ${colors} px-5 py-4 text-sm font-semibold text-white shadow-2xl`;
+      toast.textContent = message;
+      document.getElementById('toastContainer').appendChild(toast);
+      setTimeout(() => toast.remove(), 3600);
+    }
+
+    function openModal(title, content, actionLabel = 'Mengerti') {
+      const modal = document.getElementById('modal');
+      modal.innerHTML = `<div class="max-w-lg rounded-3xl bg-white p-6 shadow-2xl surface"><div class="mb-4 flex items-start justify-between gap-4"><div><h2 class="text-2xl font-bold">${title}</h2></div><button data-action="close-modal" class="grid h-10 w-10 place-items-center rounded-2xl border border-slate-200 surface">${icon('x','h-5 w-5')}</button></div><div class="text-sm leading-6 text-slate-600 muted">${content}</div><div class="mt-6 flex justify-end gap-3"><button data-action="close-modal" class="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold surface">Tutup</button><button data-action="modal-ok" class="rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">${actionLabel}</button></div></div>`;
+      modal.classList.remove('hidden'); modal.classList.add('flex'); document.body.classList.add('modal-open'); refreshIcons();
+    }
+
+    function closeModal() { const modal = document.getElementById('modal'); modal.classList.add('hidden'); modal.classList.remove('flex'); document.body.classList.remove('modal-open'); }
+
+    function openAiModal() {
+      openModal('AI Academic Assistant', `<div id="aiModalLog" class="mb-3 max-h-64 overflow-y-auto rounded-2xl bg-slate-50 p-4 soft"><p><b>AI:</b> Tanyakan tentang KRS, jadwal, nilai, kehadiran, atau kuesioner.</p></div><div class="flex gap-2"><input id="aiModalInput" class="h-11 flex-1 rounded-2xl border border-slate-200 px-4" placeholder="Contoh: jadwal saya hari ini"/><button data-action="ai-modal-send" class="rounded-2xl bg-sky-600 px-4 text-white">Kirim</button></div>`, 'Selesai');
+    }
+
+    function aiReply(text) {
+      const q = text.toLowerCase();
+      if (q.includes('krs')) return 'Status KRS kamu masih menunggu persetujuan dosen wali. Kamu bisa membuka menu Wizard KRS untuk melanjutkan.';
+      if (q.includes('jadwal')) return 'Hari ini ada 3 mata kuliah: Rekayasa Fitur, Desain Interaksi Perangkat Lunak, dan Komputasi Awan.';
+      if (q.includes('nilai')) return 'Riwayat nilai tersedia di menu Hasil Studi > Riwayat Nilai.';
+      if (q.includes('hadir') || q.includes('kehadiran')) return 'Kehadiran semester berjalan 92%, masih aman.';
+      return 'Saya belum punya data itu di prototype, tapi tombol dan navigasinya sudah aktif untuk demo interaksi.';
+    }
+
+    function sendMiniAi(inputId, logId) {
+      const input = document.getElementById(inputId);
+      const log = document.getElementById(logId);
+      if (!input || !input.value.trim()) return showToast('Tulis pertanyaan dulu.');
+      const userText = input.value.trim();
+      log.innerHTML += `<p><b>Kamu:</b> ${userText}</p><p><b>AI:</b> ${aiReply(userText)}</p>`;
+      input.value = ''; log.scrollTop = log.scrollHeight;
+    }
+
+    function applyAccessSettings() {
+      document.documentElement.style.setProperty('--scale', state.textSize === 'Kecil' ? '.92' : state.textSize === 'Besar' ? '1.12' : '1');
+      document.body.classList.toggle('dark-mode', state.theme === 'Gelap');
+      document.body.classList.toggle('high-contrast', state.contrast === 'Tinggi');
+      document.getElementById('notifDot').classList.toggle('hidden', state.notificationsRead);
+    }
+
+    document.addEventListener('click', (e) => {
+      const pageBtn = e.target.closest('[data-page]');
+      const actionBtn = e.target.closest('[data-action]');
+
+      if (pageBtn) { navigate(pageBtn.dataset.page); return; }
+      if (!actionBtn) return;
+
+      const action = actionBtn.dataset.action;
+      if (action === 'toggle-mobile') { document.getElementById('mobileOverlay').classList.remove('hidden'); document.getElementById('mobileSidebar').classList.remove('hidden'); }
+      if (action === 'close-mobile') closeMenus();
+      if (action === 'toggle-notification') document.getElementById('notificationPanel').classList.toggle('hidden');
+      if (action === 'toggle-profile') document.getElementById('profilePanel').classList.toggle('hidden');
+      if (action === 'open-ai') openAiModal();
+      if (action === 'mini-ai-send') sendMiniAi('miniAiInput', 'miniAiLog');
+      if (action === 'ai-modal-send') sendMiniAi('aiModalInput', 'aiModalLog');
+      if (action === 'mark-read') { state.notificationsRead = true; applyAccessSettings(); showToast('Semua notifikasi ditandai dibaca.', 'success'); }
+      if (action === 'profile-info') openModal('Profil Mahasiswa', '<p><b>Nama:</b> Narisa Syahril</p><p><b>Kelas:</b> IF-9</p><p><b>Semester:</b> VI</p><p>Ini adalah tampilan demo profil mahasiswa.</p>');
+      if (action === 'logout-demo') showToast('Logout demo berhasil disimulasikan.');
+      if (action === 'start-guide') openModal('Panduan Mahasiswa Baru', '<ol class="list-decimal space-y-2 pl-5"><li>Cek status akademik di dashboard.</li><li>Masuk ke Wizard KRS.</li><li>Pilih mata kuliah dan kelas.</li><li>Kirim KRS untuk persetujuan dosen wali.</li></ol>', 'Mulai');
+      if (action === 'schedule-detail') openModal('Detail Jadwal', `<p><b>Mata kuliah:</b> ${actionBtn.dataset.course}</p><p>Detail ruangan, dosen, dan status kuliah ditampilkan di sini.</p>`);
+      if (action === 'set-krs-step') { state.krsStep = Number(actionBtn.dataset.step); renderAll(false); showToast(`Berpindah ke langkah ${state.krsStep}.`); }
+      if (action === 'krs-prev') { state.krsStep = Math.max(1, state.krsStep - 1); renderAll(false); }
+      if (action === 'krs-next') { if (state.krsStep < 5) { state.krsStep++; renderAll(false); showToast(`Lanjut ke langkah ${state.krsStep}.`); } else { openModal('KRS Berhasil Dikirim', '<p>Simulasi pengiriman KRS berhasil. Status berubah menjadi menunggu persetujuan dosen wali.</p>', 'Selesai'); } }
+      if (action === 'toggle-course') { const name = actionBtn.dataset.course; actionBtn.checked ? state.selectedCourses.add(name) : state.selectedCourses.delete(name); renderAll(false); showToast(`${name} ${actionBtn.checked ? 'dipilih' : 'dibatalkan'}.`); }
+      if (action === 'course-info') openModal('Detail Mata Kuliah', `<p><b>${actionBtn.dataset.course}</b></p><p>Informasi SKS, jadwal, kelas, dan status rekomendasi mata kuliah.</p>`);
+      if (action === 'set-access') { state[actionBtn.dataset.group] = actionBtn.dataset.value; renderAll(false); showToast(`Pengaturan ${actionBtn.dataset.group} menjadi ${actionBtn.dataset.value}.`, 'success'); }
+      if (action === 'toggle-keyboard') { state.keyboard = actionBtn.checked; showToast(`Navigasi keyboard ${state.keyboard ? 'aktif' : 'nonaktif'}.`); }
+      if (action === 'toggle-labels') { state.iconLabels = actionBtn.checked; showToast(`Label ikon ${state.iconLabels ? 'ditampilkan' : 'disembunyikan'}.`); }
+      if (action === 'save-access') showToast('Pengaturan aksesibilitas tersimpan.', 'success');
+      if (action === 'download-schedule') showToast('Download jadwal disimulasikan.');
+      if (action === 'open-curriculum') openModal(actionBtn.dataset.semester, '<p>Daftar mata kuliah semester ini ditampilkan sebagai detail prototype.</p><ul class="mt-2 list-disc pl-5"><li>Desain Interaksi Perangkat Lunak</li><li>Rekayasa Fitur</li><li>Komputasi Awan</li></ul>');
+      if (action === 'generic-action') showToast(`${actionBtn.dataset.label} berhasil disimulasikan.`);
+      if (action === 'row-detail') openModal('Detail Data', `<p>Detail untuk <b>${actionBtn.dataset.label}</b> ditampilkan di sini.</p>`);
+      if (action === 'toggle-wisuda') showToast(`Checklist wisuda diperbarui.`, 'success');
+      if (action === 'check-graduation') openModal('Hasil Cek Wisuda', '<p>3 dari 5 syarat sudah terpenuhi. Lengkapi sertifikat bahasa dan dokumen TA untuk lanjut.</p>');
+      if (action === 'close-modal' || action === 'modal-ok') closeModal();
+      refreshIcons();
+    });
+
+    document.getElementById('mobileOverlay').addEventListener('click', closeMenus);
+
+    document.addEventListener('input', (e) => {
+      if (e.target.id === 'globalSearch') { state.searchQuery = e.target.value; renderSearch(); }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeMenus(); closeModal(); }
+      if (e.key === 'Enter' && document.activeElement?.id === 'globalSearch') {
+        const first = document.querySelector('#searchPanel [data-page]');
+        if (first) navigate(first.dataset.page); else showToast('Tekan kata kunci lain untuk mencari fitur.');
+      }
+      if (e.key === 'Enter' && document.activeElement?.id === 'miniAiInput') sendMiniAi('miniAiInput', 'miniAiLog');
+      if (e.key === 'Enter' && document.activeElement?.id === 'aiModalInput') sendMiniAi('aiModalInput', 'aiModalLog');
+    });
+
+    renderAll();
+  </script>
+</body>
+</html>
